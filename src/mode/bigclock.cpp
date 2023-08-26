@@ -1,5 +1,6 @@
 #include "mode/bigclock.h"
 
+#ifdef SERVER_ENABLE
 void BigClock::setup()
 {
   previousMinutes = -1;
@@ -38,3 +39,4 @@ void BigClock::loop()
     previousHour = timeinfo.tm_hour;
   }
 }
+#endif

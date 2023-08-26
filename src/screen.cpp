@@ -1,5 +1,6 @@
 #include "screen.h"
 #include <SPI.h>
+#include <cstdint>
 
 using namespace std;
 
@@ -108,13 +109,13 @@ void Screen_::setPixel(uint8_t x, uint8_t y, uint8_t value, uint8_t brightness)
 
 void IRAM_ATTR Screen_::onScreenTimer()
 {
-  listenOnButtonToChangeMode();
   Screen._render();
 }
 
 void Screen_::setup()
 {
   // TODO find proper unused pins for MISO and SS
+  #ifdef ESP32
   SPI.begin(PIN_CLOCK, 34, PIN_DATA, 25); // SCLK, MISO, MOSI, SS
   SPI.beginTransaction(SPISettings(10000000, MSBFIRST, SPI_MODE0));
 
@@ -122,18 +123,30 @@ void Screen_::setup()
   timerAttachInterrupt(Screen_timer, &onScreenTimer, true);
   timerAlarmWrite(Screen_timer, 200, true);
   timerAlarmEnable(Screen_timer);
+  #endif
+  #ifdef ESP8266
+  SPI.pins(PIN_CLOCK, 5, PIN_DATA, 15);  // SCLK, MISO, MOSI, SS
+  SPI.begin();
+  SPI.beginTransaction(SPISettings(10000000, MSBFIRST, SPI_MODE0));
+
+  /**
+  timer1_attachInterrupt(&onScreenTimer);
+  timer1_enable(TIM_DIV256, TIM_EDGE, TIM_SINGLE); 
+  timer1_write(100);
+  **/
+  #endif
 }
 
-void Screen_::_render()
+void IRAM_ATTR Screen_::_render()
 {
   const auto buf = this->getRotatedRenderBuffer();
 
-  static byte bits[ROWS * COLS / 8] = {0};
+  static uint8_t bits[ROWS * COLS / 8] = {0};
   memset(bits, 0, ROWS * COLS / 8);
 
-  static byte counter = 0;
+  static uint8_t counter = 0;
 
-  for (int idx = 0; idx < ROWS * COLS; idx++)
+  for (uint16_t idx = 0; idx < ROWS * COLS; idx++)
   {
     bits[idx >> 3] |= (buf[positions[idx]] > counter ? 0x80 : 0) >> (idx & 7);
   }
@@ -143,6 +156,9 @@ void Screen_::_render()
   digitalWrite(PIN_LATCH, LOW);
   SPI.writeBytes(bits, sizeof(bits));
   digitalWrite(PIN_LATCH, HIGH);
+#ifdef ESP8266
+  //timer1_write(100);
+#endif
 }
 
 void Screen_::cacheCurrent()
@@ -204,7 +220,7 @@ void Screen_::drawRectangle(int x, int y, int width, int height, bool fill, int 
 
 void Screen_::drawCharacter(int x, int y, std::vector<int> bits, int bitCount, uint8_t brightness)
 {
-  for (int i = 0; i < bits.size(); i += bitCount)
+  for (uint i = 0; i < bits.size(); i += bitCount)
   {
     for (int j = 0; j < bitCount; j++)
     {
@@ -218,7 +234,7 @@ std::vector<int> Screen_::readBytes(std::vector<int> bytes)
   vector<int> bits;
   int k = 0;
 
-  for (int i = 0; i < bytes.size(); i++)
+  for (uint i = 0; i < bytes.size(); i++)
   {
     for (int j = 8 - 1; j >= 0; j--)
     {
@@ -233,7 +249,7 @@ std::vector<int> Screen_::readBytes(std::vector<int> bytes)
 
 void Screen_::drawNumbers(int x, int y, std::vector<int> numbers, uint8_t brightness)
 {
-  for (int i = 0; i < numbers.size(); i++)
+  for (uint i = 0; i < numbers.size(); i++)
   {
     this->drawCharacter(x + (i * 5), y, this->readBytes(smallNumbers[numbers.at(i)]), 4, brightness);
   }
@@ -247,12 +263,13 @@ uint8_t Screen_::getCurrentBrightness() const
 void Screen_::setBrightness(uint8_t brightness)
 {
   this->brightness = brightness;
-  analogWrite(PIN_ENABLE, 255 - brightness);
+  //analogWrite(PIN_ENABLE, 255 - brightness);
+  digitalWrite(PIN_ENABLE, LOW);
 }
 
 void Screen_::drawBigNumbers(int x, int y, std::vector<int> numbers, uint8_t brightness)
 {
-  for (int i = 0; i < numbers.size(); i++)
+  for (uint i = 0; i < numbers.size(); i++)
   {
     this->drawCharacter(x + (i * 8), y, this->readBytes(bigNumbers[numbers.at(i)]), 8, brightness);
   }

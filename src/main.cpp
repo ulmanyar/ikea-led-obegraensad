@@ -1,6 +1,14 @@
 #include <Arduino.h>
 #include <SPI.h>
+#include <cstdint>
+#include <cstdlib>
+#include <iterator>
+#ifdef ESP32
 #include <WiFi.h>
+#endif
+#ifdef ESP8266
+#include <ESP8266WiFi.h>
+#endif
 
 #include "constants.h"
 #include "mode/mode.h"
@@ -8,11 +16,14 @@
 #include "secrets.h"
 #include "ota.h"
 #include "webserver.h"
-#include "screen.h"
+#include "new_screen.h"
 #include "mode/mode.h"
+#include "mode/rain.h"
 
 unsigned long previousMillis = 0;
 unsigned long interval = 30000;
+
+Rain main_rain;
 
 void setup()
 {
@@ -22,7 +33,8 @@ void setup()
   pinMode(PIN_CLOCK, OUTPUT);
   pinMode(PIN_DATA, OUTPUT);
   pinMode(PIN_ENABLE, OUTPUT);
-  pinMode(PIN_BUTTON, INPUT_PULLUP);
+  //pinMode(PIN_BUTTON, INPUT_PULLUP);
+  pinMode(PIN_BUTTON, INPUT);
 
 // server
 #ifdef ENABLE_SERVER
@@ -56,15 +68,25 @@ void setup()
   initWebServer();
 #endif
 
-  Screen.setup();
-  Screen.clear();
-  loadMode();
-  Screen.loadFromStorage();
+  new_screen.setup();
+  new_screen.clear();
+  //main_rain.setup();
 }
 
 void loop()
 {
-  loopOfAllModes();
+    uint8_t ext_buffer[ROWS * COLS] = {0};
+    // Try explicit call to _render()
+    unsigned long currentMillis = millis();
+    if (currentMillis - previousMillis >= 2000) {
+        previousMillis = currentMillis;
+        for (uint16_t pixel = 0; pixel < ROWS * COLS; pixel++) {
+            ext_buffer[pixel] = random(0,255);
+        }
+        new_screen.setBuffer(ext_buffer);
+        new_screen.render();
+    }
+#ifdef ENABLE_SERVER
   unsigned long currentMillis = millis();
   // if WiFi is down, try reconnecting every CHECK_WIFI_TIME seconds
   if ((WiFi.status() != WL_CONNECTED) && (currentMillis - previousMillis >=interval)) {
@@ -73,7 +95,6 @@ void loop()
     WiFi.reconnect();
     previousMillis = currentMillis;
   }
-#ifdef ENABLE_SERVER
   cleanUpClients();
 #endif
 }
