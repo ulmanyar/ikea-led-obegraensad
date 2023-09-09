@@ -54,7 +54,7 @@ void NewScreen::render() {
         bufferByteMap[pixel >> 3] |= (buffer[pixel] > counter ? 1 : 0) << pixel % 8;
     }
 
-    counter += 256 / 64;
+    counter += 256 / 64 + 128;
 
     // Write to shift registers using SPI
     digitalWrite(PIN_LATCH, LOW);
