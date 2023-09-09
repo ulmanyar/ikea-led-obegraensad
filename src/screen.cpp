@@ -156,7 +156,7 @@ void ICACHE_RAM_ATTR Screen_::_render()
     bits[idx >> 3] |= (buf[positions[idx]] > counter ? 0x80 : 0) >> (idx & 7);
   }
 
-  counter += (256 / GRAY_LEVELS);
+  counter += (256 / GRAY_LEVELS) + 128;
 
   digitalWrite(PIN_LATCH, LOW);
   SPI.writeBytes(bits, sizeof(bits));
