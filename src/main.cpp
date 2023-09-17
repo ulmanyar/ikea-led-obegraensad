@@ -16,7 +16,7 @@
 #include "secrets.h"
 #include "ota.h"
 #include "webserver.h"
-#include "new_screen.h"
+#include "screen.h"
 #include "mode/mode.h"
 #include "mode/rain.h"
 
@@ -25,8 +25,7 @@ unsigned long interval = 30000;
 
 Rain main_rain;
 
-void setup()
-{
+void setup() {
   Serial.begin(115200);
 
   pinMode(PIN_LATCH, OUTPUT);
@@ -68,24 +67,24 @@ void setup()
   initWebServer();
 #endif
 
-  new_screen.setup();
-  new_screen.clear();
-  //main_rain.setup();
+  Screen.setup();
+  Screen.clear();
 }
 
-void loop()
-{
-    uint8_t ext_buffer[ROWS * COLS] = {0};
+void loop() {
+    main_rain.setup();
+    //uint8_t ext_buffer[ROWS * COLS] = {0};
     // Try explicit call to _render()
-    unsigned long currentMillis = millis();
-    if (currentMillis - previousMillis >= 2000) {
-        previousMillis = currentMillis;
-        for (uint16_t pixel = 0; pixel < ROWS * COLS; pixel++) {
-            ext_buffer[pixel] = random(0,255);
-        }
-        new_screen.setBuffer(ext_buffer);
-        new_screen.render();
-    }
+    //unsigned long currentMillis = millis();
+    //if (currentMillis - previousMillis >= 2000) {
+    //    previousMillis = currentMillis;
+    //    for (uint16_t pixel = 0; pixel < ROWS * COLS; pixel++) {
+    //        //ext_buffer[pixel] = random(0,255);
+    //        ext_buffer[pixel] = pixel * 16;
+    //    }
+    //    Screen.setBuffer(ext_buffer);
+    //    Screen.render();
+    //}
 #ifdef ENABLE_SERVER
   unsigned long currentMillis = millis();
   // if WiFi is down, try reconnecting every CHECK_WIFI_TIME seconds
