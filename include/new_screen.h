@@ -65,4 +65,4 @@ class NewScreen {
 
 };
 
-extern NewScreen& Screen;
+extern NewScreen& NScreen;

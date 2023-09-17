@@ -115,7 +115,7 @@ void IRAM_ATTR Screen_::onScreenTimer()
 void Screen_::setup()
 {
   // TODO find proper unused pins for MISO and SS
-  #ifdef ESP32
+#ifdef ESP32
   SPI.begin(PIN_CLOCK, 34, PIN_DATA, 25); // SCLK, MISO, MOSI, SS
   SPI.beginTransaction(SPISettings(10000000, MSBFIRST, SPI_MODE0));
 
@@ -123,41 +123,63 @@ void Screen_::setup()
   timerAttachInterrupt(Screen_timer, &onScreenTimer, true);
   timerAlarmWrite(Screen_timer, 200, true);
   timerAlarmEnable(Screen_timer);
-  #endif
-  #ifdef ESP8266
+#endif
+#ifdef ESP8266
   SPI.pins(PIN_CLOCK, 5, PIN_DATA, 15);  // SCLK, MISO, MOSI, SS
   SPI.begin();
   SPI.beginTransaction(SPISettings(10000000, MSBFIRST, SPI_MODE0));
 
-  /**
   timer1_attachInterrupt(&onScreenTimer);
-  timer1_enable(TIM_DIV256, TIM_EDGE, TIM_SINGLE); 
+  timer1_enable(TIM_DIV256, TIM_EDGE, TIM_SINGLE);
   timer1_write(100);
-  **/
-  #endif
+#endif
+  // Setup the brightnessMap
+  delay(1000);
+  uint8_t unusedBits = 27 - __builtin_clz(Screen_::grayLevels);
+  for (uint8_t idx = 0; idx < Screen_::grayLevels; idx++) {
+    uint8_t bitReversedIdx = idx;
+    // Reverse the byte: 10010110 -> 01101001
+    // First, swap sequence of 4: 01234567 -> 45670123
+    bitReversedIdx = (bitReversedIdx & 0xF0) >> 4 | (bitReversedIdx & 0x0F) << 4;
+    // Then swap sequence of 2: 45670123 -> 67452301
+    bitReversedIdx = (bitReversedIdx & 0xCC) >> 2 | (bitReversedIdx & 0x33) << 2;
+    // Then swap sequence of 1: 67452301 -> 76543210
+    bitReversedIdx = (bitReversedIdx & 0xAA) >> 1 | (bitReversedIdx & 0x55) << 1;
+    // We only want to reverse the first log2(grayLevels) bits, since they
+    // represent the number of steps that will be taken by the brightness
+    // counter to reach 256 in grayLevels steps
+    bitReversedIdx >>= unusedBits;
+    // Now, assign the values in a lookup table
+    brightnessMap_[idx] = bitReversedIdx * (256 / grayLevels);
+    Serial.println();
+    Serial.print(brightnessMap_[idx]);
+  }
+
 }
 
 void IRAM_ATTR Screen_::_render()
 {
-  const auto buf = this->getRotatedRenderBuffer();
+  const uint8_t* buffer = getRotatedRenderBuffer();
+  static uint8_t counter = 0;
 
   static uint8_t bits[ROWS * COLS / 8] = {0};
   memset(bits, 0, ROWS * COLS / 8);
 
-  static uint8_t counter = 0;
-
   for (uint16_t idx = 0; idx < ROWS * COLS; idx++)
   {
-    bits[idx >> 3] |= (buf[positions[idx]] > counter ? 0x80 : 0) >> (idx & 7);
+    uint8_t brightnessThreshold = brightnessMap_[counter % grayLevels];
+    bits[idx >> 3] |= (buffer[positions[idx]] > brightnessThreshold ? 0x80 : 0) >> idx % 8;
   }
 
-  counter += (256 / 64);
+  // Increment counter
+  counter++;
 
+  // Write to shift registers using SPI
   digitalWrite(PIN_LATCH, LOW);
   SPI.writeBytes(bits, sizeof(bits));
   digitalWrite(PIN_LATCH, HIGH);
 #ifdef ESP8266
-  //timer1_write(100);
+  timer1_write(100);
 #endif
 }
 

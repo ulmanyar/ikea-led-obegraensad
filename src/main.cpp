@@ -69,12 +69,16 @@ void setup() {
 
   Screen.setup();
   Screen.clear();
+  loadMode();
+  Screen.loadFromStorage();
 }
 
 void loop() {
-    main_rain.setup();
+  listenOnButtonToChangeMode();
+  //main_rain.loop();
+  loopOfAllModes();
     //uint8_t ext_buffer[ROWS * COLS] = {0};
-    // Try explicit call to _render()
+    //// Try explicit call to _render()
     //unsigned long currentMillis = millis();
     //if (currentMillis - previousMillis >= 2000) {
     //    previousMillis = currentMillis;
@@ -82,8 +86,8 @@ void loop() {
     //        //ext_buffer[pixel] = random(0,255);
     //        ext_buffer[pixel] = pixel * 16;
     //    }
-    //    Screen.setBuffer(ext_buffer);
-    //    Screen.render();
+    //    Screen.setRenderBuffer(ext_buffer);
+    //    Screen._render();
     //}
 #ifdef ENABLE_SERVER
   unsigned long currentMillis = millis();

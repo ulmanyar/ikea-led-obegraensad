@@ -81,8 +81,10 @@ void setMode(MODE mode, bool selfLoading)
   }
   else if (mode == BIGCLOCK)
   {
+#ifdef ENABLE_SERVER
     bigClock.setup();
     buttonModeCount = 8;
+#endif
   }
   else if (mode == WEATHER)
   {

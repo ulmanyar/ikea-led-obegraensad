@@ -56,7 +56,7 @@ uint8_t NewScreen::getBufferIndex(int index) { // From Screen_
 }
 
 void NewScreen::renderOnTimer() {
-    Screen.render();
+    NScreen.render();
 }
 
 void NewScreen::render() {
@@ -191,5 +191,5 @@ NewScreen& NewScreen::getInstance() {
     return instance;
 }
 
-NewScreen& Screen = Screen.getInstance();
+NewScreen& NScreen = NScreen.getInstance();
 
